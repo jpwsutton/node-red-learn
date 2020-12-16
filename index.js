@@ -1,6 +1,7 @@
 const EventEmitter = require('events');
 const express = require("express");
 const http = require("http");
+const fs = require("fs");
 
 // Load the Node-RED editor components
 const REDEditorAPI = require("@node-red/editor-api");
@@ -11,6 +12,8 @@ const REDRegistry = require("@node-red/registry");
 const runtimeAPI = require("./lib/runtime/index.js");
 
 const PORT = process.env.PORT || 8000;
+
+var log = REDUtil.log;
 
 // Create the base app and http server
 const app = express();
@@ -24,13 +27,51 @@ const settings = {
     available: ()  => false,
     httpNodeRoot: "/",
     version: "1.2.4",
+   // adminAuth: require("./user-authentication"),
     editorTheme: {
-        page: { title: "Node-RED Learn"},
+        page: { 
+            title: "Node-RED Learn",
+            scripts: [
+                "/Users/jsutton/ibm/ets/mayflower/outreach/postcard/node-red-learn/tutorial-client.js",
+                "/Users/jsutton/ibm/ets/mayflower/outreach/postcard/node-red-learn/tutorial-tab.js",
+                "/Users/jsutton/ibm/ets/mayflower/outreach/postcard/node-red-learn/tutorial.js"
+            ]
+        },
+        asset: {
+        red: "red/red.js",
+        main: "red/main.js",
+
+    },
         header: { title: " Node-RED Learn"},
-        palette: { editable: false }
+        palette: { editable: false },
+        deployButton: {
+            //type:"simple",
+            //label:"Save",
+            //icon: "/absolute/path/to/deploy/button/image" // or null to remove image
+        },
+        menu: { // Hide unwanted menu items by id. see packages/node_modules/@node-red/editor-client/src/js/red.js:loadEditor for complete list
+            "menu-item-import-library": false,
+            "menu-item-export-library": false,
+            "menu-item-keyboard-shortcuts": false,
+            "menu-item-help": {
+                label: "Alternative Help Link Text",
+                url: "http://example.com"
+            }
+        }
     },
     coreNodesDir: __dirname+"/node_modules/@node-red/nodes",
 };
+
+REDUtil.init(settings);
+// Read in our tutorial definintion
+var tutorial = require("/Users/jsutton/ibm/ets/mayflower/outreach/postcard/node-red-learn/tutorial.js");
+
+log.warn("Loaded tutorial: " + tutorial.name);
+
+
+
+
+
 
 // Initialise our fake runtime - this seems to be the minimal set needed
 // to get the core nodes loaded.
@@ -43,14 +84,17 @@ const runtime = {
     nodes: { registerType: () => {}},
     library: { register: () => {}},
     get adminApp() { return REDEditorAPI.httpAdmin },
+    tutorial: tutorial
 }
 
 runtimeAPI.init(runtime);
 
 // Initialise the Node-RED components
-REDUtil.init(settings);
+
 REDEditorAPI.init(settings,server,{},runtimeAPI);
 REDRegistry.init(runtime)
+
+
 
 
 REDRegistry.load().then(() => REDEditorAPI.start()).then(() => {
